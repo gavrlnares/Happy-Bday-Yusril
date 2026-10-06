@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAPTCHA Interaktif Multi-Alur</title>
+  
+  <!-- Google Font Poppins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    * {
+      font-family: 'Poppins', sans-serif !important;
+      font-weight: 400;
+      box-sizing: border-box;
+    }
+
+    /* Background Template Utama dengan Fallback Motif Kayu */
+    .bg-template {
+      background-image: url('background.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      
+    }
+
+    /* Header Biru Captcha dengan Border Hitam Tipis */
+    .captcha-header-blue {
+      background-color: #52a6f8;
+      border: 1px solid #000000;
+      border-bottom: none;
+      color: #ffffff;
+      padding: 10px 12px;
+    }
+
+    /* Bodi Captcha: Gradasi Vertikal dari Putih ke Sky Blue */
+    .captcha-body-gradient {
+      background: linear-gradient(180deg, #ffffff 0%, #bce0ff 45%, #7dbdff 100%);
+      border: 1px solid #000000;
+      padding: 10px;
+    }
+
+    /* Square Tiles (1:1 Aspect Ratio) - POLOS TANPA BORDER HIASAN */
+    .square-tile {
+      aspect-ratio: 1 / 1;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+      border: none !important; /* Kotak foto polos tanpa border */
+    }
+
+    /* Overlay Seleksi Kotak Captcha */
+    .square-tile.selected::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 3px solid #0056b3;
+      background-color: rgba(59, 130, 246, 0.3);
+      pointer-events: none;
+    }
+
+    .square-tile .check-icon {
+      display: none;
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 22px;
+      height: 22px;
+      background-color: #0056b3;
+      border: 1px solid #000000;
+      border-radius: 50%;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: bold;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .square-tile.selected .check-icon {
+      display: flex;
+    }
+
+    /* Tombol Glossy Hijau Presisi dengan Border Hitam Tipis (1px solid #000) */
+    .btn-green-custom {
+      background: linear-gradient(180deg, #8bf374 0%, #58db3e 100%);
+      border: 1px solid #000000 !important;
+      color: #000000;
+      font-weight: 600;
+      font-size: 19px;
+      padding: 4px 22px;
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease, filter 0.1s ease;
+      line-height: 1.1;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .btn-green-custom:active {
+      transform: scale(0.95);
+      filter: brightness(0.95);
+    }
+
+    /* Container Kartu Pesan */
+    .message-card {
+      background: #ffffff;
+      border: 1px solid #000000 !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border-radius: 0px;
+      overflow: hidden;
+      position: relative;
+      z-index: 20;
+    }
+
+    /* Header Pink Glossy Alur 2 & 4 */
+    .header-pink {
+      background: linear-gradient(180deg, #fce4f7 0%, #f8b3e8 40%, #f382d6 100%);
+      border-bottom: 1px solid #000000 !important;
+      color: #000000;
+      font-weight: 600;
+      font-size: 18px;
+      padding: 6px 12px;
+      text-align: left;
+    }
+
+    /* Header Red/Coral Glossy Alur 3 */
+    .header-warning {
+      background: linear-gradient(180deg, #ffcfd2 0%, #ff8e96 40%, #f85b67 100%);
+      border-bottom: 1px solid #000000 !important;
+      color: #000000;
+      font-weight: 600;
+      font-size: 18px;
+      padding: 6px 12px;
+      text-align: left;
+    }
+
+    /* Body Gradasi Putih-Perak Alur 2 & 3 */
+    .body-silver {
+      background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 50%, #c2c2c2 100%);
+      border: 1px solid #000000 !important;
+      border-top: none !important;
+      padding: 28px 20px;
+      color: #000000;
+    }
+
+    /* Body Gradasi Putih ke Kuning Soft Alur 4 */
+    .body-yellow-gradient {
+      background: linear-gradient(180deg, #ffffff 0%, #ffffd6 100%);
+      border: 1px solid #000000 !important;
+      border-top: none !important;
+      padding: 16px 14px;
+      color: #000000;
+    }
+
+    /* Container Teks Scrollable Alur 4 */
+    .scrollable-text-container {
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 6px;
+      text-align: left;
+      font-size: 15px;
+      line-height: 1.35;
+      color: #000;
+      font-weight: 400;
+    }
+
+    .scrollable-text-container::-webkit-scrollbar {
+      width: 5px;
+    }
+    .scrollable-text-container::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.05);
+    }
+    .scrollable-text-container::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.3);
+      border-radius: 3px;
+    }
+
+    /* ANIMASI 1: Rotasi Bunga Lily (Alur 4 Kiri Bawah)
+       Spesifikasi: 0° ke -240° dalam 30 detik (-8°/detik) & berlanjut rotasi linier konstan 360°/45s */
+    @keyframes rotateLilyConstant {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(-360deg);
+      }
+    }
+
+    .lily-flower-anim {
+      animation: rotateLilyConstant 45s linear infinite;
+      transform-origin: center center;
+    }
+
+    /* ANIMASI 2: Ombang-ambing Titik-Titik / Pattern (Alur 4 Kanan Atas)
+       Spesifikasi: Sudut=90° (Vertikal Y), Frekuensi=0.50Hz (Periode 2s), Magnitude=9px, Wave=sine */
+    @keyframes sineWaveVertical {
+      0% {
+        transform: translateY(0px);
+      }
+      25% {
+        transform: translateY(-9px);
+      }
+      50% {
+        transform: translateY(0px);
+      }
+      75% {
+        transform: translateY(9px);
+      }
+      100% {
+        transform: translateY(0px);
+      }
+    }
+
+    .dot-pattern-anim {
+      animation: sineWaveVertical 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body id="mainBody" class="bg-template min-h-screen flex items-center justify-center p-3 select-none overflow-x-hidden">
+
+  <!-- ==================== ALUR 1: CAPTCHA SELECTION ==================== -->
+  <div id="alur-1" class="w-full max-w-[340px] sm:max-w-[360px] flex flex-col gap-3 my-auto transition-all duration-300 relative z-10">
+    
+    <!-- KARTU CAPTCHA UTAMA -->
+    <div id="captchaCard" class="shadow-2xl rounded-xs overflow-hidden">
+      
+      <!-- HEADER TEKS BIRU -->
+      <div class="captcha-header-blue">
+        <h1 class="text-[19px] sm:text-[21px] font-bold leading-tight tracking-tight text-right w-full drop-shadow-sm">
+          Confirm that you are Annisa Yusril Nabilla
+        </h1>
+        
+        <p class="text-[13px] sm:text-[14px] font-normal opacity-95 mt-2 leading-none">
+          by select all images with
+        </p>
+        <p class="text-[21px] sm:text-[23px] font-bold tracking-wide mt-0.5 leading-tight drop-shadow-sm">
+          Your Pretty Faces
+        </p>
+      </div>
+
+      <!-- BODI GRADASI PUTIH KE SKY BLUE -->
+      <div class="captcha-body-gradient">
+        <!-- GRID 3x3 PERSEGI (KOTAK 1 SAMPAI 9) - KOTAK FOTO POLOS TANPA BORDER -->
+        <div id="captchaGrid" class="grid grid-cols-3 gap-[4px] bg-white p-[4px] border border-black shadow-inner">
+          
+          <!-- KOTAK 1 (BENAR / TRUE) -->
+          <div class="square-tile" data-index="1" style="background-color: #82a3ee;" onclick="toggleSelect(1)">
+            <div class="check-icon">✓</div>
+            <img id="img-1" src="foto1.jpg" class="w-full h-full object-cover " alt="Kotak 1" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 2 (SALAH) -->
+          <div class="square-tile" data-index="2" style="background-color: #1bd61b;" onclick="toggleSelect(2)">
+            <div class="check-icon">✓</div>
+            <img id="img-2" src="foto2.jpg" class="w-full h-full object-cover " alt="Kotak 2" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 3 (BENAR / TRUE) -->
+          <div class="square-tile" data-index="3" style="background-color: #3b50f6;" onclick="toggleSelect(3)">
+            <div class="check-icon">✓</div>
+            <img id="img-3" src="foto3.jpg" class="w-full h-full object-cover " alt="Kotak 3" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 4 (SALAH) -->
+          <div class="square-tile" data-index="4" style="background-color: #ff3b3b;" onclick="toggleSelect(4)">
+            <div class="check-icon">✓</div>
+            <img id="img-4" src="foto4.jpg" class="w-full h-full object-cover " alt="Kotak 4" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 5 (BENAR / TRUE) -->
+          <div class="square-tile" data-index="5" style="background-color: #fce253;" onclick="toggleSelect(5)">
+            <div class="check-icon">✓</div>
+            <img id="img-5" src="foto5.jpg" class="w-full h-full object-cover " alt="Kotak 5" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 6 (SALAH) -->
+          <div class="square-tile" data-index="6" style="background-color: #ff48ed;" onclick="toggleSelect(6)">
+            <div class="check-icon">✓</div>
+            <img id="img-6" src="foto6.jpg" class="w-full h-full object-cover " alt="Kotak 6" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 7 (SALAH) -->
+          <div class="square-tile" data-index="7" style="background-color: #00ff00;" onclick="toggleSelect(7)">
+            <div class="check-icon">✓</div>
+            <img id="img-7" src="foto7.jpg" class="w-full h-full object-cover " alt="Kotak 7" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 8 (SALAH) -->
+          <div class="square-tile" data-index="8" style="background-color: #00ffff;" onclick="toggleSelect(8)">
+            <div class="check-icon">✓</div>
+            <img id="img-8" src="foto8.jpg" class="w-full h-full object-cover " alt="Kotak 8" onerror="this.classList.add('hidden')">
+          </div>
+
+          <!-- KOTAK 9 (BENAR / TRUE) -->
+          <div class="square-tile" data-index="9" style="background-color: #a03bff;" onclick="toggleSelect(9)">
+            <div class="check-icon">✓</div>
+            <img id="img-9" src="foto9.jpg" class="w-full h-full object-cover " alt="Kotak 9" onerror="this.classList.add('hidden')">
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TOMBOL DONE (Border Hitam Tipis) -->
+    <div class="flex justify-end items-center pr-0.5 mt-0.5">
+      <button onclick="checkAnswer()" class="btn-green-custom">
+        done
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ==================== ALUR 2: WELCOME MESSAGES ==================== -->
+  <div id="alur-2" class="hidden w-full max-w-[340px] sm:max-w-[360px] flex flex-col gap-3 my-auto transition-all duration-300 relative z-10">
+    
+    <div class="message-card">
+      <!-- HEADER PINK -->
+      <div class="header-pink">
+        Welcome Messages
+      </div>
+
+      <!-- BODY GRADASI PUTIH PERAK -->
+      <div class="body-silver text-center flex flex-col justify-center items-center min-h-[170px] space-y-4">
+        <p class="text-[19px] font-bold leading-snug">
+          Hi Yusril! Thankyou for logging in.
+        </p>
+        
+        <div class="text-[17px] font-semibold leading-normal">
+          <p>You got messages from Developer(Nares).</p>
+          <p>Please tap the button 'Next' !</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOMBOL NEXT -->
+    <div class="flex justify-center items-center mt-1">
+      <button onclick="goToAlur4()" class="btn-green-custom px-6">
+        Next
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ==================== ALUR 3: WARNING MESSAGES ==================== -->
+  <div id="alur-3" class="hidden w-full max-w-[340px] sm:max-w-[360px] flex flex-col gap-3 my-auto transition-all duration-300 relative z-10">
+    
+    <div class="message-card">
+      <!-- HEADER CORAL RED -->
+      <div class="header-warning">
+        Warning Messages
+      </div>
+
+      <!-- BODY GRADASI PUTIH PERAK -->
+      <div class="body-silver text-center flex flex-col justify-center items-center min-h-[170px]">
+        <div class="text-[19px] font-semibold leading-snug space-y-1">
+          <p>Please try again. Select ALL the images</p>
+          <p>with Your Pretty Faces on it.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOMBOL BACK -->
+    <div class="flex justify-center items-center mt-1">
+      <button onclick="resetToAlur1()" class="btn-green-custom px-6">
+        Back
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ==================== ALUR 4: MESSAGE FROM DEVELOPER ==================== -->
+  <div id="alur-4" class="hidden w-full max-w-[340px] sm:max-w-[360px] flex flex-col gap-3 my-auto transition-all duration-300 relative">
+    
+    <!-- TEMPLATE FOTO PATTERN TITIK-TITIK (KANAN ATAS BELAKANG KOTAK) -->
+    <div class="absolute -top-24 -right-14 w-56 h-56 z-0 pointer-events-none dot-pattern-anim opacity-80">
+      <img id="img-dot-pattern" src="" class="w-full h-full object-contain " alt="Dot Pattern" onerror="this.classList.add('hidden')">
+    </div>
+
+    <!-- KARTU PESAN UTAMA ALUR 4 -->
+    <div class="message-card relative z-20">
+      <!-- HEADER PINK -->
+      <div class="header-pink">
+        Message From Developer(Nares)
+      </div>
+
+      <!-- BODY GRADASI PUTIH KE KUNING SOFT DENGAN TEKS SCROLLABLE -->
+      <div class="body-yellow-gradient">
+        <div class="scrollable-text-container space-y-3">
+          <p>
+            HAPPY BIRTHDAY KE 20 TAHUN, YUS
+
+Anjay kepala 2, xixixixi. Semoga diberi panjang umur, sehat selalu, diberi perlindungan dalam segala situasi & dilancarkan studinya yaah. Amiinn. Thankyou for existing in my life jugaa, tanpa kaw mungkin jalan hidupku berbeda (asek) (jgn npd pls srius ini y). GA KERASA YHH UDH KE 2 KALI NGERAYAIN ULTAH BARENGGGG. Makasi yaa udah stay jd temen ak teruss. Lopyu deh. Oya, SEMOGAAAA CPT DIKASI HILAL JODOH YAAA, biar ga jones mulu busyet dah. Meski kau agak nyebelin (memang) (dan aku jg sih), tetap jd diri sendiri ya yus, jangan biarkan 1-2 hal atau lebih bkin dirimu bnr² berubah (kecuali profesionalitas kerja yah). 
+Semoga makin bertambahnya umur ini, kau semakin berani speak up dan berkurang sifat people pleaser nya yah, it'll ruin u seiring berjalannya waktu kalo ga km kurangi yuss, pelan² aja yaa, semangatt. 
+
+Truss, Ini ada hadiah kecil dr aku, semoga suka yaa hehe, aku gatau kau sukanya kayak gimana.. jd aku cariin yg cocok sm warna² bajumu aja :]
+          </p>
+          <p>
+            sekali lagi, HAPPY BIRTHDAYY YUSRIILLL
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTAINER BAWAH: BUNGA LILY & TOMBOL BACK -->
+    <div class="relative w-full flex justify-end items-center mt-1 z-10 min-h-[120px]">
+      
+      <!-- TEMPLATE FOTO BUNGA LILY (KIRI BAWAH) -->
+      <div class="absolute -left-24 -bottom-20 w-72 h-72 z-0 pointer-events-none overflow-visible">
+        <div class="w-full h-full lily-flower-anim flex items-center justify-center">
+          <img id="img-lily-flower" src="" class="w-full h-full object-contain " alt="Bunga Lily" onerror="this.classList.add('hidden')">
+        </div>
+      </div>
+
+      <!-- TOMBOL BACK DI KANAN BAWAH (Mengarah kembali ke Alur 1) -->
+      <button onclick="resetToAlur1FromAlur4()" class="btn-green-custom relative z-30 px-6">
+        Back
+      </button>
+
+    </div>
+
+  </div>
+
+  <script>
+    // Kunci Jawaban Alur 1: Hanya Kotak 1, 3, 5, dan 9
+    const CORRECT_KEYS = new Set([1, 3, 5, 9]);
+    
+    // Set penampung kotak terpilih saat ini
+    const selectedTiles = new Set();
+
+    // Memberi atau melepas tanda centang pada kotak 1-9
+    function toggleSelect(index) {
+      const tile = document.querySelector(`.square-tile[data-index="${index}"]`);
+      if (selectedTiles.has(index)) {
+        selectedTiles.delete(index);
+        tile.classList.remove('selected');
+      } else {
+        selectedTiles.add(index);
+        tile.classList.add('selected');
+      }
+    }
+
+    // Fungsi verifikasi tombol "done" di Alur 1
+    function checkAnswer() {
+      const isSameSize = selectedTiles.size === CORRECT_KEYS.size;
+      let isCorrect = isSameSize;
+
+      if (isCorrect) {
+        selectedTiles.forEach(val => {
+          if (!CORRECT_KEYS.has(val)) {
+            isCorrect = false;
+          }
+        });
+      }
+
+      // Sembunyikan Alur 1
+      document.getElementById('alur-1').classList.add('hidden');
+
+      if (isCorrect) {
+        // Jika Benar (EXACTLY 1, 3, 5, 9) -> Beralih ke Alur 2
+        document.getElementById('alur-2').classList.remove('hidden');
+      } else {
+        // Jika Salah/Kurang/Lebih -> Beralih ke Alur 3
+        document.getElementById('alur-3').classList.remove('hidden');
+      }
+    }
+
+    // Navigasi Kembali dari Alur 3 ke Alur 1
+    function resetToAlur1() {
+      selectedTiles.clear();
+      document.querySelectorAll('.square-tile').forEach(tile => {
+        tile.classList.remove('selected');
+      });
+
+      document.getElementById('alur-3').classList.add('hidden');
+      document.getElementById('alur-1').classList.remove('hidden');
+    }
+
+    // Navigasi Kembali dari Alur 4 ke Alur 1
+    function resetToAlur1FromAlur4() {
+      selectedTiles.clear();
+      document.querySelectorAll('.square-tile').forEach(tile => {
+        tile.classList.remove('selected');
+      });
+
+      document.getElementById('alur-4').classList.add('hidden');
+      document.getElementById('alur-1').classList.remove('hidden');
+    }
+
+    // Function pendukung acak untuk Confetti
+    function randomInRange(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    // FUNGSI CONFETTI BURST (5 Detik) DI ALUR 4
+    function launchConfettiBurst5s() {
+      if (typeof confetti !== 'function') return;
+
+      const duration = 5 * 1000; // 5 Detik
+      const animationEnd = Date.now() + duration;
+
+      const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 40 * (timeLeft / duration);
+
+        // Muncrat confetti dari sisi kiri & kanan atas
+        confetti({
+          particleCount: particleCount,
+          startVelocity: 30,
+          spread: 360,
+          ticks: 60,
+          origin: { x: randomInRange(0.1, 0.4), y: Math.random() - 0.2 },
+          zIndex: 1000
+        });
+
+        confetti({
+          particleCount: particleCount,
+          startVelocity: 30,
+          spread: 360,
+          ticks: 60,
+          origin: { x: randomInRange(0.6, 0.9), y: Math.random() - 0.2 },
+          zIndex: 1000
+        });
+      }, 200);
+    }
+
+    // Pindah dari Alur 2 ke Alur 4 saat klik "Next"
+    function goToAlur4() {
+      document.getElementById('alur-2').classList.add('hidden');
+      document.getElementById('alur-4').classList.remove('hidden');
+
+      // Jalankan Kejutan Confetti selama 5 Detik
+      launchConfettiBurst5s();
+    }
+
+    /* =================================================================
+       TEMPLATE FOTO / GAMBAR:
+       Silakan isi URL atau nama file gambar lokal Anda di dalam objek ini.
+       ================================================================= */
+    const fotoTemplate = {
+      // Gambar Background Utama (Opsional)
+      background: "background.jpg",
+
+      // Foto Kotak Captcha 1-9
+      1: "", // URL Foto Teman 1 (Kotak 1 - True)
+      2: "", // URL Foto Lain 1 (Kotak 2 - False)
+      3: "", // URL Foto Teman 2 (Kotak 3 - True)
+      4: "", // URL Foto Lain 2 (Kotak 4 - False)
+      5: "", // URL Foto Teman 3 (Kotak 5 - True)
+      6: "", // URL Foto Lain 3 (Kotak 6 - False)
+      7: "", // URL Foto Lain 4 (Kotak 7 - False)
+      8: "", // URL Foto Lain 5 (Kotak 8 - False)
+      9: "", // URL Foto Teman 4 (Kotak 9 - True)
+
+      // Gambar Hiasan Alur 4
+      lily: "bunga_lily.png",       // URL Gambar Bunga Lily (Rotasi kontra-searah jarum jam)
+      dotPattern: "pattern_titik.png"  // URL Gambar Pattern Titik-titik (Ombang-ambing Vertikal Sine Wave)
+    };
+
+    // Memuat foto otomatis saat dokumen siap
+    window.addEventListener('DOMContentLoaded', () => {
+      // Set background jika diisi di fotoTemplate
+      if (fotoTemplate.background && fotoTemplate.background.trim() !== "") {
+        document.getElementById('mainBody').style.backgroundImage = `url('${fotoTemplate.background}')`;
+      }
+
+      // Memasang foto kotak 1-9
+      for (let i = 1; i <= 9; i++) {
+        const url = fotoTemplate[i];
+        if (url && url.trim() !== "") {
+          const img = document.getElementById(`img-${i}`);
+          if (img) {
+            img.src = url;
+            img.classList.remove('hidden');
+          }
+        }
+      }
+
+      // Memasang gambar Bunga Lily
+      if (fotoTemplate.lily && fotoTemplate.lily.trim() !== "") {
+        const imgLily = document.getElementById('img-lily-flower');
+        if (imgLily) {
+          imgLily.src = fotoTemplate.lily;
+          imgLily.classList.remove('hidden');
+        }
+      }
+
+      // Memasang gambar Pattern Titik-titik
+      if (fotoTemplate.dotPattern && fotoTemplate.dotPattern.trim() !== "") {
+        const imgDot = document.getElementById('img-dot-pattern');
+        if (imgDot) {
+          imgDot.src = fotoTemplate.dotPattern;
+          imgDot.classList.remove('hidden');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
